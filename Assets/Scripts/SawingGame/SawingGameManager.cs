@@ -29,6 +29,16 @@ public class SawingGameManager : MonoBehaviour, IMinigame
     public float SessionTimeLeft => Mathf.Max(0f, sessionTimer);
     public bool IsSessionComplete => sessionTimer <= 0f;
 
+    public Action<IMinigame> OnGameComplete { get; set; }
+
+    public Dictionary<string, float> GetGameMetrics()
+    {
+        return new Dictionary<string, float>
+    {
+        { "Completed Cuts", completedCuts }
+    };
+    }
+
     void Start()
     {
         lastZ = saw.localPosition.z;
@@ -95,6 +105,7 @@ public class SawingGameManager : MonoBehaviour, IMinigame
 
     void CompleteSession()
     {
+        OnGameComplete?.Invoke(this);
         Debug.Log($"Session Complete! Total cuts: {completedCuts}");
         // Optionally, you can trigger UI or callback to send this value to your scoring system
     }

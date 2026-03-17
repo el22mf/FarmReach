@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -41,6 +42,15 @@ public class ApplePickingGameManager : MonoBehaviour, IMinigame
 
     HandToggle hand;
 
+    public Action<IMinigame> OnGameComplete { get; set; }
+    public Dictionary<string, float> GetGameMetrics()
+    {
+        return new Dictionary<string, float>
+    {
+        { "Average Time", FinalAverageTime }
+    };
+    }
+
     void Start()
     {
         sessionStarted = true;
@@ -73,6 +83,8 @@ public class ApplePickingGameManager : MonoBehaviour, IMinigame
                 finalAverageAccuracy = GetSessionAverageAccuracy();
                 finalAverageTime = GetAverageAppleTime();
                 sessionCompleted = true;
+
+                OnGameComplete?.Invoke(this);
 
                 Debug.Log(
                     $"Apple Picking Complete! Avg Accuracy: {finalAverageAccuracy:F2}, Avg Time: {finalAverageTime:F2}s"
@@ -142,7 +154,7 @@ public class ApplePickingGameManager : MonoBehaviour, IMinigame
         List<Apple> available = new List<Apple>(allApples);
         for (int i = 0; i < totalTargets && available.Count > 0; i++)
         {
-            int randIndex = Random.Range(0, available.Count);
+            int randIndex = UnityEngine.Random.Range(0, available.Count);
             Apple target = available[randIndex];
             targetApples.Add(target);
             available.RemoveAt(randIndex);

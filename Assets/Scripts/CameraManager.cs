@@ -9,6 +9,8 @@ public class CameraManager : MonoBehaviour
 
     private CinemachineBrain brain;
 
+    public GameObject overviewMenuCanvas;
+
     private void Start()
     {
         // Get CinemachineBrain once
@@ -21,10 +23,7 @@ public class CameraManager : MonoBehaviour
 
     private void Update()
     {
-        //if (Input.GetKeyDown(KeyCode.Escape))
-        //{
-        //    ExitToOverview();
-        //}
+
     }
 
     public void SwitchToZone(int index)
@@ -45,6 +44,13 @@ public class CameraManager : MonoBehaviour
 
         foreach (var cam in zoneCams)
             cam.Priority = 0;
+
+
+        if (overviewMenuCanvas != null)
+            overviewMenuCanvas.SetActive(false); // hide until blend finishes
+
+        StartCoroutine(PauseAfterBlend());
+
     }
 
     public void ExitToOverview()
@@ -58,8 +64,6 @@ public class CameraManager : MonoBehaviour
             g.SetActive(false);
         }
 
-        // Pause after blend
-        StartCoroutine(PauseAfterBlend());
     }
 
     private IEnumerator PauseAfterBlend()
@@ -70,5 +74,9 @@ public class CameraManager : MonoBehaviour
 
         yield return new WaitForSecondsRealtime(blendTime + 0.05f);
         Time.timeScale = 0f;
+
+        if (overviewMenuCanvas != null)
+            overviewMenuCanvas.SetActive(true);
+
     }
 }

@@ -1,11 +1,6 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
-
-public interface IMinigame
-{
-    void ResetGame();
-    bool IsActive();
-}
 
 public class CropWateringGameManager : MonoBehaviour, IMinigame
 {
@@ -53,7 +48,16 @@ public class CropWateringGameManager : MonoBehaviour, IMinigame
     private bool sessionStarted = false;
 
 
+    public Action<IMinigame> OnGameComplete { get; set; }
 
+    public Dictionary<string, float> GetGameMetrics()
+    {
+        return new Dictionary<string, float>
+    {
+        { "Average Time", FinalAverageTime },
+        { "Average Accuracy", FinalAverageAccuracy }
+    };
+    }
 
 
     private List<GrowCabbage> targetCabbages = new List<GrowCabbage>();
@@ -78,6 +82,8 @@ public class CropWateringGameManager : MonoBehaviour, IMinigame
                 finalAverageAccuracy = GetSessionAverageAccuracy();
                 finalAverageTime = GetAverageCabbageTime();
                 sessionCompleted = true;
+
+                OnGameComplete?.Invoke(this);
 
                 Debug.Log(
                     $"Session complete! Avg Accuracy: {finalAverageAccuracy:F2}, Avg Time: {finalAverageTime:F2}s"
@@ -171,7 +177,7 @@ public class CropWateringGameManager : MonoBehaviour, IMinigame
 
         for (int i = 0; i < totalTargets && available.Count > 0; i++)
         {
-            int randIndex = Random.Range(0, available.Count);
+            int randIndex = UnityEngine.Random.Range(0, available.Count);
             GrowCabbage target = available[randIndex];
             targetCabbages.Add(target);
             available.RemoveAt(randIndex);
@@ -183,7 +189,7 @@ public class CropWateringGameManager : MonoBehaviour, IMinigame
         // Set all other cabbages to random size
         foreach (GrowCabbage cabbage in available)
         {
-            float randomScale = Random.Range(nonTargetMinScale, nonTargetMaxScale);
+            float randomScale = UnityEngine.Random.Range(nonTargetMinScale, nonTargetMaxScale);
             cabbage.SetScale(randomScale);
         }
     }

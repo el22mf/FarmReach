@@ -19,13 +19,20 @@ public class MainMenu : MonoBehaviour
     public CinemachineVirtualCamera overviewVCam;  // gameplay camera
 
     public centralGameManager centralGameManager;
+    public GameObject gameCompleteCanvas;
+    public GameObject overviewMenuCanvas;
+
+    public static MainMenu Instance;
+    public CameraManager cameraManager; // assign via inspector
 
 
     // Use this for initialization
     void Awake()
 	{
+        Instance = this;
         ActivateMenuCamera();
         metricsPanel.SetActive(false);
+        overviewMenuCanvas.SetActive(false); 
     }
 
     //Update is called once per frame
@@ -48,15 +55,6 @@ public class MainMenu : MonoBehaviour
         menuVCams[index].Priority = 10;
     }
 
-    void ActivateOverviewCamera()
-    {
-        // Disable all menu cameras
-        foreach (var vcam in menuVCams)
-            vcam.Priority = 0;
-
-        // Enable overview
-        overviewVCam.Priority = 10;
-    }
 
     //Start New Game
     public void PlayAsGuest()
@@ -76,7 +74,8 @@ public class MainMenu : MonoBehaviour
                 pauseMenu.ResetPause();
         }
 
-        ActivateOverviewCamera();
+        if (cameraManager != null)
+            cameraManager.SwitchToOverview();
     }
 
     public static class GameState
@@ -103,6 +102,8 @@ public class MainMenu : MonoBehaviour
         mainMenuPanel.SetActive(false);
 
         //gameUIPanel.SetActive(true);
+        overviewMenuCanvas.SetActive(true);
+
 
         GameState.sessionActive = true;
 
@@ -113,7 +114,8 @@ public class MainMenu : MonoBehaviour
                 pauseMenu.ResetPause();
         }
 
-        ActivateOverviewCamera();
+        if (cameraManager != null)
+            cameraManager.SwitchToOverview();
     }
 
     public void OpenPause()
@@ -135,6 +137,8 @@ public class MainMenu : MonoBehaviour
         //gameUIPanel.SetActive(false);
         metricsPanel.SetActive(false);
         mainMenuPanel.SetActive(true);
+        gameCompleteCanvas.SetActive(false);
+        overviewMenuCanvas.SetActive(false);
 
 
         centralGameManager.ResetAllMinigames();

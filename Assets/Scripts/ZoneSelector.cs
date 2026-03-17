@@ -10,6 +10,7 @@ public class clickScript : MonoBehaviour
     public GameObject[] minigames;
 
     public GameObject metricsPanel;
+    public GameObject overviewMenuCanvas;
 
     private void Start()
     {
@@ -46,6 +47,7 @@ public class clickScript : MonoBehaviour
         {
             minigames[0].SetActive(true);
             metricsPanel.SetActive(true);
+            overviewMenuCanvas.SetActive(false);
         }
     }
 }
