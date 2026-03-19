@@ -53,10 +53,10 @@ public class CropWateringGameManager : MonoBehaviour, IMinigame
     public Dictionary<string, float> GetGameMetrics()
     {
         return new Dictionary<string, float>
-    {
-        { "Average Time", FinalAverageTime },
-        { "Average Accuracy", FinalAverageAccuracy }
-    };
+        {
+            { "Average Time", FinalAverageTime },
+            { "Average Accuracy", FinalAverageAccuracy }
+        };
     }
 
 

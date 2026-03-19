@@ -1,114 +1,276 @@
-//using System;
-//using System.Collections.Generic;
-//using UnityEngine;
+using System;
+using System.Collections.Generic;
+using System.Security.Cryptography;
+using UnityEngine;
 
-//public class HammeringGameManager : MonoBehaviour, IMinigame
-//{
-//    [Header("Hammer Setup")]
-//    public Transform hammer;                   // Hammer object (rotation input)
+public class HammeringGameManager : MonoBehaviour, IMinigame
+{
+    [Header("Hammer Setup")]
+    public Transform hammer;
 
-//    [Header("Fences & Nails")]
-//    public List<Fence> fences = new List<Fence>();  // All fences in the scene
-//    private int currentFenceIndex = 0;              // Tracks current fence
+    [Header("Nails")]
+    public Transform[] nails;                 // Assign in order (6 nails)
+    public float nailMaxDepth = 1f;
+    public float visualDepth = 0.05f;         // How far nails move down visually
 
-//    [Header("Session Settings")]
-//    public float sessionDuration = 60f;         // Total game time in seconds
+    [Header("Hammer Positioning")]
+    public Vector3 hammerOffset = new Vector3(0f, 0.1f, 0.05f);
+    public float followSpeed = 10f;
 
-//    [Header("Rotation Settings")]
-//    public float rotationTolerance = 10f;       // Degrees tolerance for hit/pullback
+    [Header("Angle Settings")]
+    public float loadAngle = 80f;             // Wrist pulled back
+    public float hitThreshold = 20f;          // Forward swing trigger
+    public float maxAngle = 90f;
+    private float maxPullbackAngle = 0f;
 
-//    [Header("Tracking")]
-//    private float sessionTimer;
-//    private int totalNailsHammered = 0;
+    [Header("Hit Strength")]
+    public float fullHitPower = 0.35f;        // ~3 full hits per nail
 
-//    public int TotalNailsHammered => totalNailsHammered;
-//    public float SessionTimeLeft => Mathf.Max(0f, sessionTimer);
-//    public bool IsSessionComplete => sessionTimer <= 0f;
+    [Header("Session")]
+    public float sessionDuration = 60f;
 
-//    void Start()
-//    {
-//        sessionTimer = sessionDuration;
-//        ActivateCurrentFence();
-//    }
+    // Internal state
+    private float sessionTimer;
+    private float[] nailProgress;
+    private int currentNail = 0;
+    private int completedNails = 0;
 
-//    void LateUpdate()
-//    {
-//        if (sessionTimer <= 0f) return;
+    private bool isLoaded = false;
+    private float previousAngle;
 
-//        // Countdown timer
-//        sessionTimer -= Time.deltaTime;
+    private Vector3[] nailStartPositions;
+    public float nailDepthDistance = 0.1f; // x = 0.2 -> x = 0.1
 
-//        TrackHammerHits();
+    public int CompletedNails => completedNails;
+    public float SessionTimeLeft => Mathf.Max(0f, sessionTimer);
+    public bool IsSessionComplete => sessionTimer <= 0f;
 
-//        if (sessionTimer <= 0f)
-//        {
-//            CompleteSession();
-//        }
-//    }
 
-//    void TrackHammerHits()
-//    {
-//        Fence currentFence = fences[currentFenceIndex];
+    public Action<IMinigame> OnGameComplete { get; set; }
 
-//        foreach (Nail nail in currentFence.nails)
-//        {
-//            if (!nail.IsHammered)
-//            {
-//                bool hitRegistered = nail.TryHit(hammer.rotation);
-//                if (hitRegistered && nail.IsHammered)
-//                {
-//                    totalNailsHammered++;
-//                }
-//            }
-//        }
+    // Metrics
+    public Dictionary<string, float> GetGameMetrics()
+    {
+        return new Dictionary<string, float>
+        {
+            { "Nails Completed", completedNails }
+        };
+    }
 
-//        if (currentFence.IsComplete && currentFenceIndex < fences.Count - 1)
-//        {
-//            currentFenceIndex++;
-//            ActivateCurrentFence();
-//        }
-//    }
+    void Start()
+    {
 
-//    void ActivateCurrentFence()
-//    {
-//        for (int i = 0; i < fences.Count; i++)
-//        {
-//            fences[i].gameObject.SetActive(i == currentFenceIndex);
-//        }
-//    }
+        nailStartPositions = new Vector3[nails.Length];
 
-//    void CompleteSession()
-//    {
-//        Debug.Log($"Hammering Session Complete! Total nails hammered: {totalNailsHammered}");
-//        // Optional: trigger scoring, UI, or callbacks here
-//    }
+        for (int i = 0; i < nails.Length; i++)
+        {
+            nailStartPositions[i] = nails[i].localPosition;
+        }
 
-//    public void ResetGame()
-//    {
-//        Debug.Log("Resetting Hammering Game");
+        sessionTimer = sessionDuration;
+        nailProgress = new float[nails.Length];
 
-//        sessionTimer = sessionDuration;
-//        totalNailsHammered = 0;
-//        currentFenceIndex = 0;
+        previousAngle = GetHammerAngle();
 
-//        // Reset nails
-//        foreach (Fence fence in fences)
-//        {
-//            foreach (Nail nail in fence.nails)
-//            {
-//                nail.state = Nail.NailState.Untouched;
-//                if (nail.nailVisual != null)
-//                {
-//                    nail.nailVisual.transform.localPosition = Vector3.zero; // reset depth
-//                }
-//            }
-//        }
+        SnapHammerToCurrentNail();
+    }
 
-//        ActivateCurrentFence();
-//    }
+    void LateUpdate()
+    {
+        if (sessionTimer <= 0f) return;
 
-//    public bool IsActive()
-//    {
-//        return gameObject.activeInHierarchy && sessionTimer > 0f;
-//    }
-//}
+        sessionTimer -= Time.deltaTime;
+
+        TrackHammer();
+        UpdateHammerPosition();
+
+        if (sessionTimer <= 0f)
+        {
+            CompleteSession();
+        }
+    }
+
+    // ----------------------------
+    // HAMMER TRACKING (CORE LOGIC)
+    // ----------------------------
+    void TrackHammer()
+    {
+        float currentAngle = GetHammerAngle();
+
+        // ---- Detect load ----
+        if (!isLoaded && currentAngle <= -loadAngle)
+        {
+            isLoaded = true;
+            // Reset max pullback when starting a new load
+            maxPullbackAngle = currentAngle;
+            // Debug.Log("Hammer loaded");
+        }
+
+        // Track furthest back angle while loaded
+        if (isLoaded)
+        {
+            // Most negative angle = furthest back
+            if (currentAngle < maxPullbackAngle)
+                maxPullbackAngle = currentAngle;
+        }
+
+        // ---- Detect hit ----
+        // Right to left swing: crossing hitThreshold
+        if (isLoaded && previousAngle < hitThreshold && currentAngle >= hitThreshold)
+        {
+            // Use maxPullbackAngle for strength
+            float strength = Mathf.InverseLerp(0f, maxAngle, Mathf.Abs(maxPullbackAngle));
+
+            ApplyHit(strength);
+
+            isLoaded = false;
+            maxPullbackAngle = 0f;
+            // Debug.Log("Hit applied");
+        }
+
+        previousAngle = currentAngle;
+    }
+
+    float GetHammerAngle()
+    {
+        float angle = hammer.localEulerAngles.x;
+
+        if (angle > 180f) angle -= 360f;
+
+        return Mathf.Clamp(angle, -maxAngle, maxAngle);
+    }
+
+    // ----------------------------
+    // HIT + NAIL PROGRESSION
+    // ----------------------------
+    void ApplyHit(float strength)
+    {
+        float power = strength * fullHitPower;
+
+        nailProgress[currentNail] += power;
+
+        Debug.Log($"Hit nail {currentNail} | Strength: {strength:F2}");
+
+        UpdateNailVisual();
+
+        if (nailProgress[currentNail] >= nailMaxDepth)
+        {
+            CompleteNail();
+        }
+    }
+
+    void UpdateNailVisual()
+    {
+        float progress = nailProgress[currentNail] / nailMaxDepth;
+
+        Vector3 start = nailStartPositions[currentNail];
+        Vector3 end = start + Vector3.left * nailDepthDistance;
+
+        nails[currentNail].localPosition = Vector3.Lerp(start, end, progress);
+    }
+
+    void CompleteNail()
+    {
+        completedNails++;
+        Debug.Log($"Nail {currentNail} complete!");
+
+        currentNail++;
+
+        if (currentNail >= nails.Length)
+        {
+            // Instead of ending session, reset all nails
+            ResetNails();
+            return;
+        }
+
+        SnapHammerToCurrentNail();
+    }
+
+    // ----------------------------
+    // HAMMER MOVEMENT
+    // ----------------------------
+    void UpdateHammerPosition()
+    {
+        if (currentNail >= nails.Length) return;
+
+        Transform nail = nails[currentNail];
+
+        float progress = nailProgress[currentNail] / nailMaxDepth;
+
+        Vector3 dynamicOffset = hammerOffset;
+        dynamicOffset.y -= progress * visualDepth;
+
+        Vector3 targetPos = nail.position + dynamicOffset;
+
+        hammer.position = Vector3.Lerp(
+            hammer.position,
+            targetPos,
+            Time.deltaTime * followSpeed
+        );
+    }
+
+    void SnapHammerToCurrentNail()
+    {
+        if (currentNail >= nails.Length) return;
+
+        hammer.position = nails[currentNail].position + hammerOffset;
+    }
+
+    void ResetNails()
+    {
+        // Reset progress
+        nailProgress = new float[nails.Length];
+
+        // Reset nail visuals
+        for (int i = 0; i < nails.Length; i++)
+        {
+            nails[i].localPosition = nailStartPositions[i];
+        }
+
+        // Reset hammer
+        currentNail = 0;
+        SnapHammerToCurrentNail();
+
+        isLoaded = false;
+        previousAngle = GetHammerAngle();
+        maxPullbackAngle = 0f;
+
+        Debug.Log("All nails reset! Start again.");
+    }
+
+    // ----------------------------
+    // SESSION CONTROL
+    // ----------------------------
+    void CompleteSession()
+    {
+        OnGameComplete?.Invoke(this);
+        Debug.Log($"Session Complete! Nails done: {completedNails}");
+    }
+
+    public void ResetGame()
+    {
+        sessionTimer = sessionDuration;
+        completedNails = 0;
+        currentNail = 0;
+
+        nailProgress = new float[nails.Length];
+
+        isLoaded = false;
+        previousAngle = GetHammerAngle();
+
+        // Reset nail visuals
+        foreach (Transform nail in nails)
+        {
+            Vector3 pos = nail.localPosition;
+            pos.x = 0.2f;
+            nail.localPosition = pos;
+        }
+
+        SnapHammerToCurrentNail();
+    }
+
+    public bool IsActive()
+    {
+        return gameObject.activeInHierarchy && sessionTimer > 0f;
+    }
+}

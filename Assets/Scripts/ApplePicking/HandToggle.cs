@@ -44,12 +44,9 @@ public class HandToggle : MonoBehaviour
         currentTilt = GetSupinationAngle();
 
         // Update target apple reference
-        //Debug.Log("Hand sees manager: " + (gameManager != null));
-
+        Debug.Log("Hand sees manager: " + (gameManager != null));
         if (gameManager == null || !gameManager.IsActive()) return;
         currentTargetApple = gameManager.GetCurrentTarget();
-
-        if (currentTargetApple == null) return;
 
         Debug.Log("Hand target: " + (currentTargetApple ? currentTargetApple.name : "NULL"));
     }
@@ -100,7 +97,7 @@ public class HandToggle : MonoBehaviour
             if (yDiff > grabRadius * 0.5f) continue;
 
             Apple appleComp = c.GetComponentInParent<Apple>();
-            if (appleComp == currentTargetApple)
+            if (appleComp != null && appleComp == currentTargetApple)
                 return true;
         }
 
@@ -119,7 +116,7 @@ public class HandToggle : MonoBehaviour
             if (yDiff > grabRadius * 0.5f) continue;
 
             Apple appleComp = c.GetComponentInParent<Apple>();
-            if (appleComp == currentTargetApple)
+            if (appleComp != null && appleComp == currentTargetApple)
             {
                 GrabApple(appleComp.gameObject);
                 break;
@@ -131,21 +128,9 @@ public class HandToggle : MonoBehaviour
 
     public GameObject ReleaseApple()
     {
-        if (grabbedApple == null) return null;
-
-        GameObject apple = grabbedApple;
-
-        Rigidbody rb = apple.GetComponent<Rigidbody>();
-        if (rb != null) rb.isKinematic = false;
-
-        grabbedApple.transform.SetParent(null);
-        grabbedApple = null;
-        isGrabbing = false;
-
-        SetHandState(false);
-
-        return apple;
+        return grabbedApple; // do NOT unparent or disable here
     }
+
 
     public void GrabApple(GameObject apple)
     {
@@ -183,6 +168,8 @@ public class HandToggle : MonoBehaviour
     {
         return GetSupinationAngle() <= tolerance;
     }
+
+
 
     void OnDrawGizmosSelected()
     {
