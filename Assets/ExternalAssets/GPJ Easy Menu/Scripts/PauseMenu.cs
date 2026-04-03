@@ -29,6 +29,8 @@ public class PauseMenu : MonoBehaviour
     public GameObject overviewMenuCanvas;
     public CameraManager cameraManager;
 
+    private bool overviewMenuWasActive;
+
     // Use this for initialization
     void Start()
 	{
@@ -49,15 +51,32 @@ public class PauseMenu : MonoBehaviour
         isPaused = !isPaused;
         pauseScreen.SetActive(isPaused);
 
-        if(isPaused)
+        if (isPaused)
         {
+            // Store time scale
             storeTimeScale = Time.timeScale;
             Time.timeScale = 0f;
-        } else
+
+            // Store overview canvas state and hide it
+            if (overviewMenuCanvas != null)
+            {
+                overviewMenuWasActive = overviewMenuCanvas.activeSelf;
+                overviewMenuCanvas.SetActive(false);
+            }
+        }
+        else
         {
+            // Restore time scale
             Time.timeScale = storeTimeScale;
+
             optionsScreen.SetActive(false);
             instructionsScreen.SetActive(false);
+
+            // Restore overview canvas only if it was active before pause
+            if (overviewMenuCanvas != null && overviewMenuWasActive)
+            {
+                overviewMenuCanvas.SetActive(true);
+            }
         }
     }
 

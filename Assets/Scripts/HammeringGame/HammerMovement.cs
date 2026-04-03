@@ -4,6 +4,11 @@ using UnityEngine;
 
 public class HammerMovement : MonoBehaviour
 {
+    public KinematicsProcessor kinematicsProcessor;
+    public SerialReader serialReader;
+
+    public bool invertWristTilt = false;
+    public float wristTiltOffset = 0f;
 
     public float tiltSpeed = 50f; // how fast it tilts when you press Q/E
 
@@ -15,13 +20,20 @@ public class HammerMovement : MonoBehaviour
     void HandleTilt()
     {
         // Tilt forward/back with Q/E (this will control pouring)
-        if (Input.GetKey(KeyCode.Q))
-        {
-            transform.Rotate(Vector3.right, tiltSpeed * Time.deltaTime);
-        }
-        if (Input.GetKey(KeyCode.E))
-        {
-            transform.Rotate(Vector3.right, -tiltSpeed * Time.deltaTime);
-        }
+        if (serialReader == null)
+            return;
+
+        float wrist = serialReader.wristAngle;
+
+        //Clamp it
+        wrist = Mathf.Clamp(wrist, -90f, 90f);
+
+        if (invertWristTilt)
+            wrist = -wrist;
+
+        wrist += wristTiltOffset;
+
+        Vector3 euler = transform.rotation.eulerAngles;
+        transform.rotation = Quaternion.Euler(wrist, euler.y, euler.z);
     }
 }

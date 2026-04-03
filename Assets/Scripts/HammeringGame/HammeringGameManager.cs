@@ -90,14 +90,11 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         }
     }
 
-    // ----------------------------
-    // HAMMER TRACKING (CORE LOGIC)
-    // ----------------------------
     void TrackHammer()
     {
         float currentAngle = GetHammerAngle();
 
-        // ---- Detect load ----
+        // Detect load
         if (!isLoaded && currentAngle <= -loadAngle)
         {
             isLoaded = true;
@@ -114,7 +111,7 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
                 maxPullbackAngle = currentAngle;
         }
 
-        // ---- Detect hit ----
+        // Detect hit
         // Right to left swing: crossing hitThreshold
         if (isLoaded && previousAngle < hitThreshold && currentAngle >= hitThreshold)
         {
@@ -140,9 +137,6 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         return Mathf.Clamp(angle, -maxAngle, maxAngle);
     }
 
-    // ----------------------------
-    // HIT + NAIL PROGRESSION
-    // ----------------------------
     void ApplyHit(float strength)
     {
         float power = strength * fullHitPower;
@@ -186,9 +180,6 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         SnapHammerToCurrentNail();
     }
 
-    // ----------------------------
-    // HAMMER MOVEMENT
-    // ----------------------------
     void UpdateHammerPosition()
     {
         if (currentNail >= nails.Length) return;
@@ -238,9 +229,6 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         Debug.Log("All nails reset! Start again.");
     }
 
-    // ----------------------------
-    // SESSION CONTROL
-    // ----------------------------
     void CompleteSession()
     {
         OnGameComplete?.Invoke(this);
