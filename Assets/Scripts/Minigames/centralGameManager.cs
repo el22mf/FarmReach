@@ -39,7 +39,7 @@ public class centralGameManager : MonoBehaviour
         metricsPanel.SetActive(false);
 
         var metrics = game.GetGameMetrics();
-        GameCompleteManager.Instance.ShowResults(metrics);
+        GameCompleteManager.Instance.ShowResults(metrics, game);
     }
 
 

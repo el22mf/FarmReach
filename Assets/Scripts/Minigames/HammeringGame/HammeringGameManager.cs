@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using UnityEngine;
 
 public class HammeringGameManager : MonoBehaviour, IMinigame
@@ -8,28 +7,44 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
     [Header("Hammer Setup")]
     public Transform hammer;
 
+    [Header("Guide Hammer")]
+    public Transform guideHammer;
+    public float guideInterval = 2f;
+    public float guideMoveDuration = 0.4f;
+    private bool guideAnimating = false;
+    private float guideAnimTimer = 0f;
+
+    private float guideStartAngle;
+    private float guideTargetAngle;
+
+    [Header("Adaptive Guide")]
+    public float inactivityTime = 2f;
+    public float movementThreshold = 5f; // degrees
+
+    private float inactivityTimer = 0f;
+    private float lastAngle;
+
     [Header("Nails")]
-    public Transform[] nails;                 // Assign in order (6 nails)
+    public Transform[] nails;
     public float nailMaxDepth = 1f;
-    public float visualDepth = 0.05f;         // How far nails move down visually
+    public float visualDepth = 0.05f;
 
     [Header("Hammer Positioning")]
     public Vector3 hammerOffset = new Vector3(0f, 0.1f, 0.05f);
     public float followSpeed = 10f;
 
     [Header("Angle Settings")]
-    public float loadAngle = 80f;             // Wrist pulled back
-    public float hitThreshold = 20f;          // Forward swing trigger
+    public float loadAngle = 10f;
+    public float hitThreshold = 25f;
     public float maxAngle = 90f;
     private float maxPullbackAngle = 0f;
 
     [Header("Hit Strength")]
-    public float fullHitPower = 0.35f;        // ~3 full hits per nail
+    public float fullHitPower = 0.35f;
 
     [Header("Session")]
     public float sessionDuration = 60f;
 
-    // Internal state
     private float sessionTimer;
     private float[] nailProgress;
     private int currentNail = 0;
@@ -39,26 +54,30 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
     private float previousAngle;
 
     private Vector3[] nailStartPositions;
-    public float nailDepthDistance = 0.1f; // x = 0.2 -> x = 0.1
+    public float nailDepthDistance = 0.1f;
 
     public int CompletedNails => completedNails;
     public float SessionTimeLeft => Mathf.Max(0f, sessionTimer);
     public bool IsSessionComplete => sessionTimer <= 0f;
 
-
     public Action<IMinigame> OnGameComplete { get; set; }
 
-    // Metrics
-    public Dictionary<string, float> GetGameMetrics()
+    public Dictionary<string, int> GetGameMetrics()
     {
-        return new Dictionary<string, float>
+        int finalScore = (completedNails * 5 * DifficultyManager.Instance.difficulty) + 100;
+
+        return new Dictionary<string, int>
         {
-            { "Nails Completed", completedNails }
+            { "Nails Completed", completedNails },
+            { "Final Score", finalScore }
         };
     }
 
+    public string GetGameType() => "hammering";
+
     void Start()
     {
+        guideHammer.gameObject.SetActive(false);
 
         nailStartPositions = new Vector3[nails.Length];
 
@@ -71,6 +90,7 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         nailProgress = new float[nails.Length];
 
         previousAngle = GetHammerAngle();
+        lastAngle = previousAngle;
 
         SnapHammerToCurrentNail();
     }
@@ -84,6 +104,9 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         TrackHammer();
         UpdateHammerPosition();
 
+        UpdateGuideHammer();
+        AnimateGuide();
+
         if (sessionTimer <= 0f)
         {
             CompleteSession();
@@ -94,35 +117,26 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
     {
         float currentAngle = GetHammerAngle();
 
-        // Detect load
         if (!isLoaded && currentAngle <= -loadAngle)
         {
             isLoaded = true;
-            // Reset max pullback when starting a new load
             maxPullbackAngle = currentAngle;
-            // Debug.Log("Hammer loaded");
         }
 
-        // Track furthest back angle while loaded
         if (isLoaded)
         {
-            // Most negative angle = furthest back
             if (currentAngle < maxPullbackAngle)
                 maxPullbackAngle = currentAngle;
         }
 
-        // Detect hit
-        // Right to left swing: crossing hitThreshold
         if (isLoaded && previousAngle < hitThreshold && currentAngle >= hitThreshold)
         {
-            // Use maxPullbackAngle for strength
             float strength = Mathf.InverseLerp(0f, maxAngle, Mathf.Abs(maxPullbackAngle));
 
             ApplyHit(strength);
 
             isLoaded = false;
             maxPullbackAngle = 0f;
-            // Debug.Log("Hit applied");
         }
 
         previousAngle = currentAngle;
@@ -172,7 +186,6 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
 
         if (currentNail >= nails.Length)
         {
-            // Instead of ending session, reset all nails
             ResetNails();
             return;
         }
@@ -207,18 +220,91 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         hammer.position = nails[currentNail].position + hammerOffset;
     }
 
+    float GetGuideTargetAngle(float currentAngle)
+    {
+        if (currentAngle > -loadAngle)
+        {
+            return -loadAngle - 15f;
+        }
+
+        if (currentAngle < hitThreshold)
+        {
+            return hitThreshold + 15f;
+        }
+
+        return currentAngle;
+    }
+
+    void UpdateGuideHammer()
+    {
+        float currentAngle = GetHammerAngle();
+
+        float angleDelta = Mathf.Abs(currentAngle - lastAngle);
+
+        // Check if meaningful movement happened
+        if (angleDelta > movementThreshold)
+        {
+            inactivityTimer = 0f; // user is active, reset
+        }
+        else
+        {
+            inactivityTimer += Time.deltaTime;
+        }
+
+        lastAngle = currentAngle;
+
+        // Only trigger guide if user is inactive AND not already animating
+        if (!guideAnimating && inactivityTimer >= inactivityTime)
+        {
+            StartGuideMotion();
+            inactivityTimer = 0f;
+        }
+    }
+
+    void StartGuideMotion()
+    {
+        guideAnimating = true;
+        guideAnimTimer = 0f;
+
+        guideStartAngle = GetHammerAngle();
+        guideTargetAngle = GetGuideTargetAngle(guideStartAngle);
+
+        guideHammer.position = hammer.position;
+        guideHammer.gameObject.SetActive(true);
+    }
+
+    void AnimateGuide()
+    {
+        if (!guideAnimating) return;
+
+        guideAnimTimer += Time.deltaTime;
+
+        float t = guideAnimTimer / guideMoveDuration;
+
+        if (t >= 1f)
+        {
+            guideAnimating = false;
+            guideHammer.gameObject.SetActive(false);
+            return;
+        }
+
+        float smoothT = Mathf.SmoothStep(0f, 1f, t);
+
+        float angle = Mathf.Lerp(guideStartAngle, guideTargetAngle, smoothT);
+
+        guideHammer.position = hammer.position;
+        guideHammer.rotation = Quaternion.Euler(angle, -90f, 0f);
+    }
+
     void ResetNails()
     {
-        // Reset progress
         nailProgress = new float[nails.Length];
 
-        // Reset nail visuals
         for (int i = 0; i < nails.Length; i++)
         {
             nails[i].localPosition = nailStartPositions[i];
         }
 
-        // Reset hammer
         currentNail = 0;
         SnapHammerToCurrentNail();
 
@@ -246,7 +332,6 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         isLoaded = false;
         previousAngle = GetHammerAngle();
 
-        // Reset nail visuals
         foreach (Transform nail in nails)
         {
             Vector3 pos = nail.localPosition;

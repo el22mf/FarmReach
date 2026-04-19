@@ -2,13 +2,33 @@ using UnityEngine;
 
 public class DifficultyManager : MonoBehaviour
 {
-    public CropWateringGameManager cropWateringManager;
+    public static DifficultyManager Instance;
+    public float CurrentDifficulty = 1f;
 
-    private int difficulty = 1;       // internal storage
+    [Header("Game References")]
+    public CropWateringGameManager cropWateringManager;
+    public HammeringGameManager hammeringManager;
+
+    public int difficulty = 1;
+
     private float hitboxMin = 0.25f;
     private float hitboxMax = 0.75f;
 
-    // Call this from slider OnValueChanged
+    private float loadAngleMin = 10f;
+    private float loadAngleMax = 75f;
+
+    void Awake()
+    {
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
     public void SetDifficulty(float value)
     {
         difficulty = Mathf.RoundToInt(value);
@@ -17,9 +37,17 @@ public class DifficultyManager : MonoBehaviour
 
     private void ApplyDifficulty()
     {
-        if (cropWateringManager == null || cropWateringManager.allCabbages == null) return;
+        ApplyCropDifficulty();
+        ApplyHammerDifficulty();
+    }
 
-        float size = Mathf.Lerp(hitboxMax, hitboxMin, (difficulty - 1) / 9f);
+    private void ApplyCropDifficulty()
+    {
+        if (cropWateringManager == null || cropWateringManager.allCabbages == null)
+            return;
+
+        float t = (difficulty - 1) / 9f;
+        float size = Mathf.Lerp(hitboxMax, hitboxMin, t);
 
         foreach (var cabbage in cropWateringManager.allCabbages)
         {
@@ -29,11 +57,19 @@ public class DifficultyManager : MonoBehaviour
             if (col != null)
                 col.size = new Vector3(size, size, size);
         }
-        Debug.Log($"Difficulty {difficulty} applied. Cabbage hitbox size: {size:F2}");
+    }
+
+    private void ApplyHammerDifficulty()
+    {
+        if (hammeringManager == null) return;
+
+        float t = (difficulty - 1) / 9f;
+        hammeringManager.loadAngle = Mathf.Lerp(loadAngleMin, loadAngleMax, t);
+        Debug.Log("Load angle now: " + hammeringManager.loadAngle);
     }
 
     private void Start()
     {
-        ApplyDifficulty(); // apply initial difficulty at start
+        ApplyDifficulty();
     }
 }

@@ -7,5 +7,6 @@ public interface IMinigame
     void ResetGame();
     bool IsActive();
     public Action<IMinigame> OnGameComplete { get; set; }
-    Dictionary<string, float> GetGameMetrics();
+    Dictionary<string, int> GetGameMetrics();
+    string GetGameType();
 }

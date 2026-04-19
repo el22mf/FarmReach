@@ -41,14 +41,18 @@ public class ApplePickingGameManager : MonoBehaviour, IMinigame
 
     public Action<IMinigame> OnGameComplete { get; set; }
 
-    public Dictionary<string, float> GetGameMetrics()
+    public Dictionary<string, int> GetGameMetrics()
     {
-        return new Dictionary<string, float>
+        int finalScore = (int)(Mathf.Clamp01(1f - (FinalAverageTime / 60f)) * 100f * DifficultyManager.Instance.difficulty);
+
+        return new Dictionary<string, int>
         {
-            { "Average Time", FinalAverageTime },
-            { "Average Accuracy", FinalAverageAccuracy }
+            { "Average Time", (int)FinalAverageTime },
+            { "Final Score", finalScore }
         };
     }
+
+    public string GetGameType() => "picking";
     void Start()
     {
         InitializeApples();
