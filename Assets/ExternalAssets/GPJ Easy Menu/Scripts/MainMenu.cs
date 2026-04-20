@@ -23,16 +23,24 @@ public class MainMenu : MonoBehaviour
     public GameObject overviewMenuCanvas;
 
     public static MainMenu Instance;
-    public CameraManager cameraManager; // assign via inspector
+    public CameraManager cameraManager;
+
+    public AudioSource menuMusicSource;
 
 
     // Use this for initialization
     void Awake()
-	{
+    {
         Instance = this;
         ActivateMenuCamera();
         metricsPanel.SetActive(false);
-        overviewMenuCanvas.SetActive(false); 
+        overviewMenuCanvas.SetActive(false);
+
+        if (menuMusicSource != null)
+        {
+            menuMusicSource.loop = true;
+            menuMusicSource.Play();
+        }
     }
 
     //Update is called once per frame
@@ -60,6 +68,7 @@ public class MainMenu : MonoBehaviour
     public void PlayAsGuest()
     {
         Debug.Log("Starting session as Guest");
+        menuMusicSource.Stop();
 
         mainMenuPanel.SetActive(false);
         //gameUIPanel.SetActive(true);
@@ -97,7 +106,7 @@ public class MainMenu : MonoBehaviour
     public void LoginConfirmed(string username)
     {
         Debug.Log("Logged in as: " + username);
-
+        menuMusicSource.Stop();
         loginPanel.SetActive(false);
         mainMenuPanel.SetActive(false);
 
@@ -140,6 +149,7 @@ public class MainMenu : MonoBehaviour
         gameCompleteCanvas.SetActive(false);
         overviewMenuCanvas.SetActive(false);
 
+        menuMusicSource.Play();
 
         centralGameManager.ResetAllMinigames();
 
@@ -203,5 +213,27 @@ public class MainMenu : MonoBehaviour
     public void CancelQuit()
     {
         quitConfirmMenu.SetActive(false);
+    }
+    private IEnumerator FadeOutMusic(float duration)
+    {
+        if (menuMusicSource == null) yield break;
+
+        float startVolume = menuMusicSource.volume;
+        float time = 0f;
+
+        menuMusicSource.loop = true; // ensure consistent state
+
+        while (time < duration)
+        {
+            time += Time.unscaledDeltaTime;
+
+            float t = time / duration;
+            menuMusicSource.volume = Mathf.Lerp(startVolume, 0f, t);
+
+            yield return null;
+        }
+
+        menuMusicSource.volume = 0f;
+        menuMusicSource.Stop();
     }
 }

@@ -10,6 +10,7 @@ public class CameraManager : MonoBehaviour
     private CinemachineBrain brain;
 
     public GameObject overviewMenuCanvas;
+    public AudioSource clickSound;
 
     private void Start()
     {
@@ -29,6 +30,7 @@ public class CameraManager : MonoBehaviour
     public void SwitchToZone(int index)
     {
         Time.timeScale = 1f; // ensure gameplay running
+        clickSound.Play();
 
         overviewCamera.Priority = 0;
 

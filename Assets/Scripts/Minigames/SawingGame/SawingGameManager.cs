@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing.Text;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class SawingGameManager : MonoBehaviour, IMinigame
 {
@@ -69,6 +71,9 @@ public class SawingGameManager : MonoBehaviour, IMinigame
 
     public string GetGameType() => "sawing";
 
+    public AudioSource timerSound;
+    bool timerStarted = false;
+
     void Start()
     {
         guideSaw.gameObject.SetActive(false);
@@ -98,8 +103,18 @@ public class SawingGameManager : MonoBehaviour, IMinigame
 
         currentCutTimer += Time.deltaTime;
 
+        if (sessionTimer <= 10f && !timerStarted)
+        {
+            timerSound.Play();
+            timerStarted = true;
+        }
+
         if (sessionTimer <= 0f)
+        {
             CompleteSession();
+            timerStarted = false;
+            timerSound.Stop();
+        }
     }
 
     void TrackSawMovement()

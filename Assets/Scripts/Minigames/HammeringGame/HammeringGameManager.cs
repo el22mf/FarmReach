@@ -75,6 +75,14 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
 
     public string GetGameType() => "hammering";
 
+    private List<float> angleBuffer = new List<float>();
+    private List<float> timeBuffer = new List<float>();
+
+    public AudioSource timerSound;
+    public AudioSource hammerSound;
+    private bool timerStarted = false;
+
+
     void Start()
     {
         guideHammer.gameObject.SetActive(false);
@@ -93,6 +101,7 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         lastAngle = previousAngle;
 
         SnapHammerToCurrentNail();
+        GameCompleteManager.Instance.SendTaskStart("fatigue");
     }
 
     void LateUpdate()
@@ -104,12 +113,24 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         TrackHammer();
         UpdateHammerPosition();
 
+        angleBuffer.Add(GetHammerAngle());
+        timeBuffer.Add(Time.time);
+
         UpdateGuideHammer();
         AnimateGuide();
+
+        if (sessionTimer <= 10f && !timerStarted)
+        {
+            timerSound.Play();
+            timerStarted = true;
+        }
+
 
         if (sessionTimer <= 0f)
         {
             CompleteSession();
+            timerStarted = false;
+            timerSound.Stop();
         }
     }
 
@@ -157,6 +178,7 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
 
         nailProgress[currentNail] += power;
 
+        hammerSound.Play();
         Debug.Log($"Hit nail {currentNail} | Strength: {strength:F2}");
 
         UpdateNailVisual();
@@ -317,6 +339,7 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
 
     void CompleteSession()
     {
+        GameCompleteManager.Instance.SendTaskComplete("fatigue");
         OnGameComplete?.Invoke(this);
         Debug.Log($"Session Complete! Nails done: {completedNails}");
     }

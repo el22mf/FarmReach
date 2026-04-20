@@ -138,6 +138,7 @@ public class CropWateringGameManager : MonoBehaviour, IMinigame
             currentTargetFrames = 0;
             currentCabbageTimer = 0f;
 
+            GameCompleteManager.Instance.SendTaskComplete("linear");
             CompleteCurrentTarget();
         }
     }
@@ -217,6 +218,7 @@ public class CropWateringGameManager : MonoBehaviour, IMinigame
         }
 
         GrowCabbage target = targetCabbages[currentTargetIndex];
+        GameCompleteManager.Instance.SendTaskStart("linear");
 
         // Spawn glow on current target
         activeGlow = Instantiate(glowPrefab, target.transform.position, Quaternion.identity, target.transform);
