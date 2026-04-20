@@ -97,14 +97,15 @@ public class SerialReader : MonoBehaviour
     {
         string[] parts = data.Split(',');
 
-        if (parts.Length == 3)
-        {
+        //if (parts.Length == 5)
+        //{
             float.TryParse(parts[0], out armAngle);
             float.TryParse(parts[1], out handAngle);
             float.TryParse(parts[2], out wristAngle);
             handAngle = -handAngle;
             wristAngle = -wristAngle;
-        }
+        Debug.Log("Wrist angle: " + wristAngle);
+        //}
     }
 
 #if UNITY_STANDALONE_WIN || UNITY_EDITOR

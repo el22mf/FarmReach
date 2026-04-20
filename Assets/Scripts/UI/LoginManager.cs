@@ -19,6 +19,7 @@ public class AuthResponse
     public bool success;
     public string message;
     public string type;      // echo back "login" or "register"
+    public int classification;
 }
 
 public class LoginManager : MonoBehaviour
@@ -119,6 +120,13 @@ public class LoginManager : MonoBehaviour
             if (response.type == "login")
             {
                 mainMenu.LoginConfirmed(usernameInput.text);
+
+                Debug.Log("User classification: " + response.classification);
+
+                if (DifficultyManager.Instance != null)
+                {
+                    DifficultyManager.Instance.SetDifficulty(response.classification);
+                }
             }
         }
         else
