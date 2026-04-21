@@ -22,6 +22,7 @@ public class GameCompleteManager : MonoBehaviour
     public class TaskMessage
     {
         public string taskType;
+        public string gameType;
     }
 
     void Awake()
@@ -72,22 +73,24 @@ public class GameCompleteManager : MonoBehaviour
         Time.timeScale = 0f; // pause gameplay
     }
 
-    public void SendTaskStart(string taskType)
+    public void SendTaskStart(string taskType, string gameType)
     {
         TaskMessage msg = new TaskMessage
         {
-            taskType = taskType
+            taskType = taskType,
+            gameType = gameType
         };
 
         string json = JsonUtility.ToJson(msg);
         ros.Publish("/task_start", new StringMsg(json));
     }
 
-    public void SendTaskComplete(string taskType)
+    public void SendTaskComplete(string taskType, string gameType)
     {
         TaskMessage msg = new TaskMessage
         {
-            taskType = taskType
+            taskType = taskType,
+            gameType = gameType
         };
 
         string json = JsonUtility.ToJson(msg);

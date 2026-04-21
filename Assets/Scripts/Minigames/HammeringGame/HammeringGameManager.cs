@@ -101,7 +101,7 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         lastAngle = previousAngle;
 
         SnapHammerToCurrentNail();
-        GameCompleteManager.Instance.SendTaskStart("fatigue");
+        GameCompleteManager.Instance.SendTaskStart("fatigue", GetGameType());
     }
 
     void LateUpdate()
@@ -339,7 +339,7 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
 
     void CompleteSession()
     {
-        GameCompleteManager.Instance.SendTaskComplete("fatigue");
+        GameCompleteManager.Instance.SendTaskComplete("fatigue", GetGameType());
         OnGameComplete?.Invoke(this);
         Debug.Log($"Session Complete! Nails done: {completedNails}");
     }
