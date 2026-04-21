@@ -69,6 +69,9 @@ public class CropWateringGameManager : MonoBehaviour, IMinigame
     private int currentTargetIndex = -1;
     private GameObject activeGlow;
 
+    public SerialReader serialReader;
+    private int targetTheta = 45;
+
     void Start()
     {
         sessionStarted = true;
@@ -98,6 +101,11 @@ public class CropWateringGameManager : MonoBehaviour, IMinigame
             return;
         }
 
+        if (serialReader == null || current == null)
+            return;
+
+        Vector3 targetPos = current.transform.position;
+        serialReader.SendTarget(targetPos.x, targetPos.y, targetTheta);
 
         // Accuracy Sampling (run every samplingInterval seconds)
         timeSinceLastSample += Time.deltaTime;
@@ -138,7 +146,8 @@ public class CropWateringGameManager : MonoBehaviour, IMinigame
             currentTargetFrames = 0;
             currentCabbageTimer = 0f;
 
-            GameCompleteManager.Instance.SendTaskComplete("linear");
+            GameCompleteManager.Instance.SendTaskComplete("linear", GetGameType());
+            GameCompleteManager.Instance.SendTaskComplete("rotation", GetGameType());
             CompleteCurrentTarget();
         }
     }
@@ -218,7 +227,8 @@ public class CropWateringGameManager : MonoBehaviour, IMinigame
         }
 
         GrowCabbage target = targetCabbages[currentTargetIndex];
-        GameCompleteManager.Instance.SendTaskStart("linear");
+        GameCompleteManager.Instance.SendTaskStart("linear", GetGameType());
+        GameCompleteManager.Instance.SendTaskStart("rotation", GetGameType());
 
         // Spawn glow on current target
         activeGlow = Instantiate(glowPrefab, target.transform.position, Quaternion.identity, target.transform);
