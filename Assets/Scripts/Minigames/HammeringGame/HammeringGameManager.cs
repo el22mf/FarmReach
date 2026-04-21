@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public class HammeringGameManager : MonoBehaviour, IMinigame
 {
@@ -38,6 +39,8 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
     public float hitThreshold = 25f;
     public float maxAngle = 90f;
     private float maxPullbackAngle = 0f;
+    private float targetAngle = 0f;
+
 
     [Header("Hit Strength")]
     public float fullHitPower = 0.35f;
@@ -81,6 +84,8 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
     public AudioSource timerSound;
     public AudioSource hammerSound;
     private bool timerStarted = false;
+
+    public SerialReader serialReader;
 
 
     void Start()
@@ -137,6 +142,15 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
     void TrackHammer()
     {
         float currentAngle = GetHammerAngle();
+      
+        targetAngle = GetTargetAngle(currentAngle);
+
+        if (serialReader == null)
+        {
+            return;
+        }
+
+        serialReader.SendTarget(0f, 0f, targetAngle);
 
         if (!isLoaded && currentAngle <= -loadAngle)
         {
@@ -242,7 +256,7 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         hammer.position = nails[currentNail].position + hammerOffset;
     }
 
-    float GetGuideTargetAngle(float currentAngle)
+    float GetTargetAngle(float currentAngle)
     {
         if (currentAngle > -loadAngle)
         {
@@ -289,7 +303,7 @@ public class HammeringGameManager : MonoBehaviour, IMinigame
         guideAnimTimer = 0f;
 
         guideStartAngle = GetHammerAngle();
-        guideTargetAngle = GetGuideTargetAngle(guideStartAngle);
+        guideTargetAngle = GetTargetAngle(guideStartAngle);
 
         guideHammer.position = hammer.position;
         guideHammer.gameObject.SetActive(true);
